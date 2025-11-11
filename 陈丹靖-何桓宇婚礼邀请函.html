@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>婚礼邀请函</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: white;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        
+        .image-container {
+            width: 100%;
+            position: relative;
+            background: linear-gradient(135deg, #f5e6d3 0%, #e8d4ba 100%);
+        }
+        
+        .invitation-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .upload-area {
+            padding: 60px 20px;
+            text-align: center;
+            color: #666;
+        }
+        
+        .upload-btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #ef4444;
+            color: white;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        
+        .upload-btn:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .footer {
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            background: white;
+        }
+        
+        .zoom-controls {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
+        }
+        
+        .zoom-btn {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            font-size: 24px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .zoom-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* 图片查看器 */
+        .image-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .image-viewer.active {
+            display: flex;
+        }
+        
+        .viewer-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transform-origin: center;
+            transition: transform 0.3s;
+        }
+        
+        .close-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 24px;
+            z-index: 1001;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="image-container">
+            <div id="uploadArea" class="upload-area">
+                <div style="font-size: 60px; margin-bottom: 20px;">📸</div>
+                <h2 style="margin-bottom: 10px; color: #333;">婚礼邀请函</h2>
+                <p style="margin-bottom: 20px;">点击下方按钮上传您的邀请函图片</p>
+                <label for="fileInput" class="upload-btn">选择图片</label>
+                <input type="file" id="fileInput" accept="image/*">
+                <p style="margin-top: 20px; font-size: 12px; color: #999;">支持 JPG、PNG、WebP 格式</p>
+            </div>
+            <img id="invitationImage" class="invitation-image" style="display: none;" alt="婚礼邀请函">
+        </div>
+        <div class="footer">
+            <p>页面制作：<strong>丘丘</strong></p>
+            <p style="margin-top: 5px;">© 2025 · 婚礼邀请函</p>
+        </div>
+    </div>
+    
+    <!-- 缩放控制按钮 -->
+    <div class="zoom-controls" id="zoomControls" style="display: none;">
+        <button class="zoom-btn" id="zoomIn" title="放大">➕</button>
+        <button class="zoom-btn" id="zoomOut" title="缩小">➖</button>
+        <button class="zoom-btn" id="fullscreen" title="全屏查看">🔍</button>
+    </div>
+    
+    <!-- 全屏图片查看器 -->
+    <div class="image-viewer" id="imageViewer">
+        <button class="close-btn" id="closeViewer">✕</button>
+        <img id="viewerImage" class="viewer-image" alt="婚礼邀请函">
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const invitationImage = document.getElementById('invitationImage');
+        const zoomControls = document.getElementById('zoomControls');
+        const imageViewer = document.getElementById('imageViewer');
+        const viewerImage = document.getElementById('viewerImage');
+        const closeViewer = document.getElementById('closeViewer');
+        const fullscreenBtn = document.getElementById('fullscreen');
+        
+        let scale = 1;
+        let viewerScale = 1;
+        
+        // 文件选择
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    invitationImage.src = event.target.result;
+                    viewerImage.src = event.target.result;
+                    uploadArea.style.display = 'none';
+                    invitationImage.style.display = 'block';
+                    zoomControls.style.display = 'flex';
+                    
+                    // 保存到 localStorage
+                    localStorage.setItem('weddingInvitation', event.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // 拖拽上传
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.style.background = 'rgba(239, 68, 68, 0.1)';
+        });
+        
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.style.background = '';
+        });
+        
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.background = '';
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    invitationImage.src = event.target.result;
+                    viewerImage.src = event.target.result;
+                    uploadArea.style.display = 'none';
+                    invitationImage.style.display = 'block';
+                    zoomControls.style.display = 'flex';
+                    localStorage.setItem('weddingInvitation', event.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // 缩放功能
+        document.getElementById('zoomIn').addEventListener('click', function() {
+            scale = Math.min(scale + 0.2, 3);
+            invitationImage.style.transform = `scale(${scale})`;
+            invitationImage.style.transformOrigin = 'center top';
+        });
+        
+        document.getElementById('zoomOut').addEventListener('click', function() {
+            scale = Math.max(scale - 0.2, 0.5);
+            invitationImage.style.transform = `scale(${scale})`;
+            invitationImage.style.transformOrigin = 'center top';
+        });
+        
+        // 全屏查看
+        fullscreenBtn.addEventListener('click', function() {
+            imageViewer.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+        
+        closeViewer.addEventListener('click', function() {
+            imageViewer.classList.remove('active');
+            document.body.style.overflow = '';
+            viewerScale = 1;
+            viewerImage.style.transform = 'scale(1)';
+        });
+        
+        // 点击背景关闭
+        imageViewer.addEventListener('click', function(e) {
+            if (e.target === imageViewer) {
+                imageViewer.classList.remove('active');
+                document.body.style.overflow = '';
+                viewerScale = 1;
+                viewerImage.style.transform = 'scale(1)';
+            }
+        });
+        
+        // 双击放大/缩小
+        viewerImage.addEventListener('dblclick', function() {
+            viewerScale = viewerScale === 1 ? 2 : 1;
+            this.style.transform = `scale(${viewerScale})`;
+        });
+        
+        // 加载保存的图片
+        window.addEventListener('load', function() {
+            const savedImage = localStorage.getItem('weddingInvitation');
+            if (savedImage) {
+                invitationImage.src = savedImage;
+                viewerImage.src = savedImage;
+                uploadArea.style.display = 'none';
+                invitationImage.style.display = 'block';
+                zoomControls.style.display = 'flex';
+            }
+        });
+        
+        // 触摸缩放（移动端）
+        let touchDistance = 0;
+        viewerImage.addEventListener('touchstart', function(e) {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                touchDistance = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+            }
+        });
+        
+        viewerImage.addEventListener('touchmove', function(e) {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const newDistance = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+                const ratio = newDistance / touchDistance;
+                viewerScale = Math.max(0.5, Math.min(3, viewerScale * ratio));
+                this.style.transform = `scale(${viewerScale})`;
+                touchDistance = newDistance;
+            }
+        });
+    </script>
+</body>
+</html>
